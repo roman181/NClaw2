@@ -5,8 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.agents.registry import registry
 from backend.config import settings
 from backend.db import init_db
-from backend.models import HealthResponse, Mission, MissionCreate
-from backend.missions.service import create_mission, get_mission, list_missions
+from backend.models import HealthResponse, Mission, MissionCreate, MissionStatusUpdate
+from backend.missions.service import create_mission, get_mission, list_missions, update_mission_status
 
 
 @asynccontextmanager
@@ -27,7 +27,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:5500", "http://localhost:5500", "http://127.0.0.1:8000", "http://localhost:8000"],
     allow_credentials=False,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["Content-Type"],
 )
 
@@ -60,6 +60,14 @@ def missions(limit: int = Query(default=50, ge=1, le=200)) -> list[Mission]:
 @app.get("/api/missions/{mission_id}", response_model=Mission)
 def mission_detail(mission_id: str) -> Mission:
     mission = get_mission(mission_id)
+    if mission is None:
+        raise HTTPException(status_code=404, detail="Mission not found")
+    return mission
+
+
+@app.patch("/api/missions/{mission_id}", response_model=Mission)
+def patch_mission(mission_id: str, payload: MissionStatusUpdate) -> Mission:
+    mission = update_mission_status(mission_id, payload.status)
     if mission is None:
         raise HTTPException(status_code=404, detail="Mission not found")
     return mission
