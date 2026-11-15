@@ -316,6 +316,27 @@
   .mission.done { border-left-color: var(--green); }
   .mission.paused { border-left-color: var(--yellow); }
 
+  .mission-form { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+  .form-field { display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .form-field:first-child, .form-field:nth-child(2) { grid-column:1 / -1; }
+  .form-field label { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; }
+  .form-field input, .form-field textarea, .form-field select, .mission-status {
+    width:100%; min-height:44px; padding:9px 10px; border:1.5px solid var(--line);
+    border-radius:6px; background:#fff; color:var(--ink); font:15px 'Patrick Hand',cursive;
+  }
+  .form-field textarea { resize:vertical; }
+  .mission-button, .status-button {
+    min-height:44px; padding:8px 14px; border:2px solid var(--line); border-radius:7px;
+    background:var(--ink); color:#fff; font:16px 'Patrick Hand',cursive; cursor:pointer;
+  }
+  .mission-button { justify-self:start; }
+  .mission-controls { display:grid; grid-template-columns:minmax(130px,1fr) auto; gap:8px; margin-top:10px; }
+  .status-button { background:#fff; color:var(--ink); }
+  .mission-description { margin:6px 0; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .mission-feedback { min-height:20px; margin-top:8px; color:var(--accent2); }
+  .mission-feedback.error { color:var(--red); }
+  @media (max-width:650px) { .mission-form { grid-template-columns:1fr; } .form-field:first-child,.form-field:nth-child(2) { grid-column:auto; } }
+
   /* ============ SYSTEM MONITOR ============ */
   .meter {
     margin-bottom: 14px;
@@ -529,10 +550,18 @@
   <!-- ========= MAIN ========= -->
   <main class="main">
     <section class="card sketch" id="nclaw-live-panel" aria-live="polite">
-      <h3>Backend-Verbindung <span class="tag" id="api-state">PRÜFE …</span></h3>
+      <h3>NClaw Missionen <span class="tag" id="api-state">PRÜFE …</span></h3>
       <p id="api-message">Verbinde mit der lokalen NClaw API unter http://127.0.0.1:8000 …</p>
+      <form id="mission-form" class="mission-form">
+        <div class="form-field"><label for="mission-title">Missionstitel</label><input id="mission-title" name="title" maxlength="160" required placeholder="z. B. Repository analysieren"></div>
+        <div class="form-field"><label for="mission-description">Beschreibung</label><textarea id="mission-description" name="description" maxlength="10000" required rows="2" placeholder="Was soll erledigt werden?"></textarea></div>
+        <div class="form-field"><label for="mission-priority">Priorität</label><select id="mission-priority" name="priority"><option value="low">Niedrig</option><option value="normal" selected>Normal</option><option value="high">Hoch</option><option value="urgent">Dringend</option></select></div>
+        <button class="mission-button" type="submit">＋ Mission anlegen</button>
+      </form>
+      <p id="mission-feedback" class="mission-feedback" role="status"></p>
+      <h3 style="margin-top:16px;">Gespeicherte Missionen <span class="tag" id="mission-count">0</span></h3>
       <div id="api-missions" class="missions" style="margin-top:12px;"></div>
-      <small style="display:block;margin-top:10px;color:#777;font-family:'JetBrains Mono',monospace;">Echte Backend-Daten · Aktualisierung alle 15 Sekunden</small>
+      <small style="display:block;margin-top:10px;color:#777;font-family:'JetBrains Mono',monospace;">Echte SQLite-Daten · automatische Aktualisierung alle 15 Sekunden</small>
     </section>
 
     <!-- STAT STRIP -->
@@ -767,36 +796,98 @@
     })[ch]);
   }
 
+  const missionFeedback = document.getElementById('mission-feedback');
+  const missionForm = document.getElementById('mission-form');
+  const missionStatuses = ['PLANNED','RUNNING','WAITING_APPROVAL','PAUSED','COMPLETED','FAILED','CANCELLED'];
+
+  function showMissionFeedback(message, isError = false) {
+    missionFeedback.textContent = message;
+    missionFeedback.classList.toggle('error', isError);
+  }
+
+  async function apiRequest(path, options = {}) {
+    const response = await fetch(NCLAW_API + path, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.detail || 'API-Fehler (' + response.status + ')');
+    return payload;
+  }
+
+  function renderMissions(missions) {
+    document.getElementById('mission-count').textContent = missions.length;
+    apiMissions.innerHTML = missions.length ? missions.map(m => {
+      const options = missionStatuses.map(status =>
+        '<option value="' + status + '"' + (m.status === status ? ' selected' : '') + '>' +
+        status.replaceAll('_', ' ') + '</option>'
+      ).join('');
+      return '<article class="mission" data-mission-id="' + escapeHtml(m.id) + '">' +
+        '<div class="title">' + escapeHtml(m.title) + '</div>' +
+        '<p class="mission-description">' + escapeHtml(m.description) + '</p>' +
+        '<div class="meta"><span>Priorität: ' + escapeHtml(m.priority) + '</span>' +
+        '<span>Aktualisiert: ' + escapeHtml(new Date(m.updated_at).toLocaleString('de-DE')) + '</span></div>' +
+        '<div class="mission-controls"><label>Status<select class="mission-status" aria-label="Status für ' + escapeHtml(m.title) + '">' + options + '</select></label>' +
+        '<button class="status-button" type="button" data-save-status>Speichern</button></div></article>';
+    }).join('') : '<p>Noch keine Missionen angelegt.</p>';
+  }
+
   async function refreshNclaw() {
     try {
-      const [healthResponse, agentsResponse, missionsResponse] = await Promise.all([
-        fetch(NCLAW_API + '/api/health'),
-        fetch(NCLAW_API + '/api/agents'),
-        fetch(NCLAW_API + '/api/missions')
+      const [health, agents, missions] = await Promise.all([
+        apiRequest('/api/health'), apiRequest('/api/agents'), apiRequest('/api/missions')
       ]);
-      if (!healthResponse.ok || !agentsResponse.ok || !missionsResponse.ok) {
-        throw new Error('API antwortet mit einem Fehlerstatus');
-      }
-      const health = await healthResponse.json();
-      const agents = await agentsResponse.json();
-      const missions = await missionsResponse.json();
       apiState.textContent = 'VERBUNDEN';
       apiState.style.background = '#e8f5e9';
       apiMessage.textContent = health.service + ' · Datenbank: ' + health.database +
         ' · Agenten registriert: ' + agents.length;
-      apiMissions.innerHTML = missions.length
-        ? missions.map(m => '<div class="mission"><div class="title">' +
-            escapeHtml(m.title) + '</div><div class="meta"><span>' +
-            escapeHtml(m.status) + '</span><span>Priorität: ' +
-            escapeHtml(m.priority) + '</span></div></div>').join('')
-        : '<p>Noch keine Missionen in der lokalen Datenbank.</p>';
+      renderMissions(missions);
     } catch (error) {
       apiState.textContent = 'OFFLINE';
       apiState.style.background = '#fde8e8';
       apiMessage.textContent = 'Keine Verbindung. Starte zuerst den Backend-Server (siehe docs/V1-QUICKSTART.md).';
       apiMissions.innerHTML = '';
+      document.getElementById('mission-count').textContent = '–';
     }
   }
+
+  missionForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    const formData = new FormData(missionForm);
+    const payload = {
+      title: String(formData.get('title') || '').trim(),
+      description: String(formData.get('description') || '').trim(),
+      priority: String(formData.get('priority') || 'normal')
+    };
+    try {
+      await apiRequest('/api/missions', { method:'POST', body:JSON.stringify(payload) });
+      missionForm.reset();
+      showMissionFeedback('Mission wurde in SQLite gespeichert.');
+      await refreshNclaw();
+    } catch (error) {
+      showMissionFeedback(error.message, true);
+    }
+  });
+
+  apiMissions.addEventListener('click', async event => {
+    const button = event.target.closest('[data-save-status]');
+    if (!button) return;
+    const card = button.closest('[data-mission-id]');
+    const status = card.querySelector('.mission-status').value;
+    button.disabled = true;
+    try {
+      await apiRequest('/api/missions/' + encodeURIComponent(card.dataset.missionId), {
+        method:'PATCH', body:JSON.stringify({status})
+      });
+      showMissionFeedback('Missionsstatus gespeichert: ' + status.replaceAll('_', ' ') + '.');
+      await refreshNclaw();
+    } catch (error) {
+      showMissionFeedback(error.message, true);
+    } finally {
+      button.disabled = false;
+    }
+  });
+
   refreshNclaw();
   setInterval(refreshNclaw, 15000);
 
