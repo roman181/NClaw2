@@ -1,6 +1,6 @@
 # NClaw - Local First AI Office Operating System
 
-> **Implementierungsstatus (V1, 15.11.2026):** Die nachfolgenden Abschnitte beschreiben das Zielbild. Sie sind nicht automatisch ein Nachweis bereits implementierter Funktionen. Der aktuelle Entwicklungsstand ist im Feature-Branch [feat/nclaw-v1-core](https://github.com/roman181/NClaw2/tree/feat/nclaw-v1-core) dokumentiert. Implementiert sind dort derzeit ein FastAPI-Grundgerüst, SQLite-Missionsspeicher, Agenten-Registry mit einem nicht ausführenden Nexus sowie eine erste Dashboard-Abfrage der API. Telegram, Ollama, Sandbox-Ausführung, Langzeitgedächtnis, Freigaben und die übrigen Agenten sind noch offen.
+> **Implementierungsstatus (V1, 15.11.2026):** Die nachfolgenden Abschnitte beschreiben das Zielbild. Sie sind nicht automatisch ein Nachweis bereits implementierter Funktionen. Der aktuelle Entwicklungsstand ist im Feature-Branch [feat/nclaw-v1-core](https://github.com/roman181/NClaw2/tree/feat/nclaw-v1-core) dokumentiert. Implementiert sind dort derzeit ein FastAPI-Grundgerüst, SQLite-Missionsspeicher, Missionsanlage und Statusänderungen über die API, ein Dashboard mit Formular und Live-Missionsliste, eine Agenten-Registry mit einem nicht ausführenden Nexus sowie erste API-Tests und ein GitHub-Actions-Workflow. Telegram, Ollama, Sandbox-Ausführung, Langzeitgedächtnis, Freigaben und die übrigen Agenten sind noch offen.
 
 
 <div align="center">
