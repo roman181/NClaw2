@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NClaw – Kommandozentrale</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Patrick+Hand&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f4efe1;
+    --ink: #1a1a1a;
+    --accent: #d4521e;
+    --accent2: #2b6cb0;
+    --green: #2f7a3e;
+    --yellow: #d4a017;
+    --orange: #d4691e;
+    --red: #b03030;
+    --line: #3a3a3a;
+    --grid: rgba(0,0,0,0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Patrick Hand', cursive;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 24px 24px;
+    padding: 20px;
+  }
+
+  /* ============ HAND-DRAWN BORDER EFFECT ============ */
+  .sketch {
+    border: 2.5px solid var(--line);
+    border-radius: 12px 6px 14px 8px / 8px 14px 6px 12px;
+    background: #fffdf7;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.12);
+    position: relative;
+  }
+
+  /* ============ HEADER ============ */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    margin-bottom: 20px;
+    border: 2.5px solid var(--line);
+    border-radius: 6px 14px 8px 12px / 12px 6px 14px 8px;
+    background: linear-gradient(135deg, #fffdf7 0%, #f9f5e6 100%);
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.15);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand img {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    border: 2.5px solid var(--line);
+    object-fit: cover;
+    background: #fff;
+  }
+
+  .brand h1 {
+    font-family: 'Caveat', cursive;
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    line-height: 1;
+  }
+  .brand small {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #666;
+    letter-spacing: 2px;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .status-bar .dot {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    margin-right: 5px;
+    animation: pulse 2s infinite;
+  }
+  .dot.green { background: var(--green); }
+  .dot.yellow { background: var(--yellow); }
+  .dot.red { background: var(--red); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ============ LAYOUT ============ */
+  .layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+  }
+
+  /* ============ SIDEBAR MENU ============ */
+  .sidebar {
+    padding: 18px 12px;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+  }
+
+  .sidebar h2 {
+    font-family: 'Caveat', cursive;
+    font-size: 24px;
+    text-align: center;
+    border-bottom: 2px dashed var(--line);
+    padding-bottom: 8px;
+    margin-bottom: 14px;
+  }
+
+  .menu { list-style: none; }
+  .menu li {
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    border: 1.8px solid var(--line);
+    border-radius: 8px 4px 10px 6px;
+    cursor: pointer;
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fffdf7;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .menu li:hover {
+    background: #fdf0e4;
+    transform: translateX(3px);
+  }
+  .menu li.active {
+    background: var(--ink);
+    color: #f4efe1;
+    font-weight: 700;
+  }
+  .menu li .icon { font-size: 20px; }
+  .menu li .badge {
+    margin-left: auto;
+    background: var(--accent);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+  }
+
+  /* ============ MAIN AREA ============ */
+  .main { display: flex; flex-direction: column; gap: 20px; }
+
+  /* Top stat strip */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  .stat {
+    padding: 14px;
+    text-align: center;
+    background: #fffdf7;
+  }
+  .stat .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: #666;
+    text-transform: uppercase;
+  }
+  .stat .value {
+    font-family: 'Caveat', cursive;
+    font-size: 34px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin-top: 4px;
+  }
+  .stat .value small { font-size: 16px; color: #888; }
+  .stat.green { border-color: var(--green); }
+  .stat.green .value { color: var(--green); }
+  .stat.accent { border-color: var(--accent); }
+  .stat.accent .value { color: var(--accent); }
+  .stat.blue { border-color: var(--accent2); }
+  .stat.blue .value { color: var(--accent2); }
+
+  /* ============ CARD GRID ============ */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 1100px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { position: static; }
+    .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    padding: 18px 20px;
+  }
+  .card h3 {
+    font-family: 'Caveat', cursive;
+    font-size: 24px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px dashed var(--line);
+    padding-bottom: 8px;
+  }
+  .card h3 .tag {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    background: #eee;
+    padding: 2px 8px;
+    border-radius: 8px;
+    color: #555;
+  }
+
+  /* ============ AGENTS LIST ============ */
+  .agents { display: flex; flex-direction: column; gap: 8px; }
+  .agent {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1.8px solid var(--line);
+    border-radius: 8px 4px 10px 6px;
+    background: #fff;
+    font-size: 16px;
+  }
+  .agent .status {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid var(--line);
+    flex-shrink: 0;
+  }
+  .agent .status.online { background: var(--green); }
+  .agent .status.busy { background: var(--yellow); animation: pulse 1.2s infinite; }
+  .agent .status.offline { background: #ccc; }
+  .agent .name { font-weight: 700; }
+  .agent .role {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #777;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ============ MISSION LIST ============ */
+  .missions { display: flex; flex-direction: column; gap: 10px; }
+  .mission {
+    padding: 10px 12px;
+    border-left: 5px solid var(--accent2);
+    border-top: 1.5px solid var(--line);
+    border-right: 1.5px solid var(--line);
+    border-bottom: 1.5px solid var(--line);
+    border-radius: 4px 8px 4px 8px;
+    background: #fff;
+  }
+  .mission .title { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+  .mission .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #777;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .progress {
+    height: 8px;
+    background: #eee;
+    border: 1.2px solid var(--line);
+    border-radius: 4px;
+    margin-top: 6px;
+    overflow: hidden;
+  }
+  .progress .bar {
+    height: 100%;
+    background: repeating-linear-gradient(
+      45deg,
+      var(--accent) 0 6px,
+      #e77a45 6px 12px
+    );
+  }
+  .mission.done { border-left-color: var(--green); }
+  .mission.paused { border-left-color: var(--yellow); }
+
+  /* ============ SYSTEM MONITOR ============ */
+  .meter {
+    margin-bottom: 14px;
+  }
+  .meter .meter-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+  .meter .track {
+    height: 14px;
+    background: #eee;
+    border: 1.8px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .meter .fill {
+    height: 100%;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--accent2) 0 5px,
+      #4a8bc9 5px 10px
+    );
+    transition: width 0.4s;
+  }
+  .meter.warn .fill {
+    background: repeating-linear-gradient(-45deg, var(--orange) 0 5px, #e88a45 5px 10px);
+  }
+  .meter.danger .fill {
+    background: repeating-linear-gradient(-45deg, var(--red) 0 5px, #c95050 5px 10px);
+  }
+
+  /* ============ TELEGRAM APPROVAL ============ */
+  .approval {
+    background: #fff9ec;
+    border: 2.5px dashed var(--accent);
+    border-radius: 12px;
+    padding: 14px 16px;
+    position: relative;
+  }
+  .approval::before {
+    content: "📨 TELEGRAM";
+    position: absolute;
+    top: -12px;
+    left: 14px;
+    background: var(--accent);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    padding: 2px 10px;
+    border-radius: 6px;
+  }
+  .approval .msg { font-size: 15px; margin-bottom: 6px; }
+  .approval .msg b { color: var(--accent); }
+  .approval .actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .approval .btn {
+    border: 2px solid var(--line);
+    background: #fff;
+    padding: 6px 14px;
+    border-radius: 8px 4px 10px 6px;
+    font-family: 'Patrick Hand', cursive;
+    font-size: 15px;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.15);
+    transition: all 0.1s;
+  }
+  .approval .btn:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 rgba(0,0,0,0.2); }
+  .approval .btn.allow { background: #e8f5e9; border-color: var(--green); }
+  .approval .btn.deny  { background: #fde8e8; border-color: var(--red); }
+  .approval .btn.later { background: #fff8e1; border-color: var(--yellow); }
+
+  /* ============ SKILL TREE / ACADEMY ============ */
+  .tree { display: flex; flex-direction: column; gap: 8px; }
+  .tree-node {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px;
+    border: 1.5px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    font-size: 14px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .tree-node .lvl {
+    width: 22px; height: 22px;
+    border: 1.5px solid var(--line);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px;
+    background: var(--accent2);
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .tree-node .stars {
+    margin-left: auto;
+    color: var(--yellow);
+    font-size: 12px;
+    letter-spacing: 1px;
+  }
+
+  /* ============ FOOTER ============ */
+  footer {
+    margin-top: 24px;
+    padding: 14px 22px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #777;
+    border-top: 2px dashed var(--line);
+  }
+
+  /* ============ CHAT BUBBLE ============ */
+  .chat {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+  .bubble {
+    padding: 8px 12px;
+    border-radius: 12px 12px 12px 2px;
+    background: #eef4ff;
+    border: 1.5px solid var(--accent2);
+    font-size: 14px;
+    max-width: 85%;
+    position: relative;
+  }
+  .bubble.user {
+    background: #f0f8f0;
+    border-color: var(--green);
+    margin-left: auto;
+    border-radius: 12px 12px 2px 12px;
+  }
+  .bubble .who {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: #888;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+
+  /* Rotated sketch tag */
+  .note {
+    position: absolute;
+    top: -10px; right: -8px;
+    background: var(--yellow);
+    padding: 2px 8px;
+    font-family: 'Caveat', cursive;
+    font-size: 15px;
+    border: 1.5px solid var(--line);
+    transform: rotate(3deg);
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.15);
+  }
+</style>
+</head>
+<body>
+
+<!-- =============== HEADER =============== -->
+<header>
+  <div class="brand">
+    <img src="https://raw.githubusercontent.com/roman181/NClaw2/refs/heads/main/copilot_image_1794772938889.png" alt="NClaw">
+    <div>
+      <h1>NClaw<span style="color:var(--accent)">.</span></h1>
+      <small>COMMAND CENTER · LOCAL FIRST AI OFFICE</small>
+    </div>
+  </div>
+  <div class="status-bar">
+    <span><span class="dot green"></span>ONLINE</span>
+    <span><span class="dot green"></span>OLLAMA</span>
+    <span><span class="dot yellow"></span>2 MISSIONEN</span>
+    <span id="clock">00:00:00</span>
+  </div>
+</header>
+
+<!-- =============== LAYOUT =============== -->
+<div class="layout">
+
+  <!-- ========= SIDEBAR ========= -->
+  <aside class="sidebar sketch">
+    <h2>⚓ Menü</h2>
+    <ul class="menu">
+      <li class="active"><span class="icon">🏠</span> Home</li>
+      <li><span class="icon">🤖</span> Agenten <span class="badge">12</span></li>
+      <li><span class="icon">🎯</span> Missionen <span class="badge">2</span></li>
+      <li><span class="icon">📚</span> Bibliothek</li>
+      <li><span class="icon">🧠</span> Academy</li>
+      <li><span class="icon">🌳</span> Skill Baum</li>
+      <li><span class="icon">📊</span> System</li>
+      <li><span class="icon">💬</span> Nexus Chat</li>
+      <li><span class="icon">⚙️</span> Einstellungen</li>
+    </ul>
+
+    <div style="margin-top:18px; padding-top:12px; border-top:2px dashed var(--line); font-family:'JetBrains Mono',monospace; font-size:10px; color:#777; line-height:1.7;">
+      OWNER: <b style="color:var(--ink)">roman181</b><br>
+      UPTIME: <b style="color:var(--green)">03:47:12</b><br>
+      MODELL: <b style="color:var(--accent2)">qwen2.5:14b</b>
+    </div>
+  </aside>
+
+  <!-- ========= MAIN ========= -->
+  <main class="main">
+
+    <!-- STAT STRIP -->
+    <div class="stats">
+      <div class="stat sketch green">
+        <div class="label">Aktive Agenten</div>
+        <div class="value">8<small>/12</small></div>
+      </div>
+      <div class="stat sketch accent">
+        <div class="label">Missionen</div>
+        <div class="value">2<small> +5</small></div>
+      </div>
+      <div class="stat sketch blue">
+        <div class="label">Skills</div>
+        <div class="value">147</div>
+      </div>
+      <div class="stat sketch">
+        <div class="label">Wissensstand</div>
+        <div class="value" style="color:var(--accent)">68<small>%</small></div>
+      </div>
+      <div class="stat sketch">
+        <div class="label">Speicher</div>
+        <div class="value" style="color:var(--accent2)">4.2<small>GB</small></div>
+      </div>
+    </div>
+
+    <!-- APPROVAL + AGENTS -->
+    <div class="grid-2">
+
+      <!-- AGENTS -->
+      <div class="card sketch" style="position:relative;">
+        <span class="note">live</span>
+        <h3>🤖 Agenten <span class="tag">STATUS</span></h3>
+        <div class="agents">
+          <div class="agent"><span class="status busy"></span><span class="name">Nexus</span><span class="role">CEO · koordiniert</span></div>
+          <div class="agent"><span class="status online"></span><span class="name">Planner</span><span class="role">idle</span></div>
+          <div class="agent"><span class="status busy"></span><span class="name">Sandmann</span><span class="role">pdf-analyse</span></div>
+          <div class="agent"><span class="status online"></span><span class="name">Curator</span><span class="role">idle</span></div>
+          <div class="agent"><span class="status online"></span><span class="name">Scout</span><span class="role">github-scan</span></div>
+          <div class="agent"><span class="status online"></span><span class="name">Builder</span><span class="role">idle</span></div>
+          <div class="agent"><span class="status busy"></span><span class="name">Reviewer</span><span class="role">code-review</span></div>
+          <div class="agent"><span class="status offline"></span><span class="name">Observer</span><span class="role">sleep</span></div>
+          <div class="agent"><span class="status online"></span><span class="name">Archivist</span><span class="role">idle</span></div>
+          <div class="agent"><span class="status online"></span><span class="name">Security</span><span class="role">scan</span></div>
+        </div>
+      </div>
+
+      <!-- SYSTEM MONITOR -->
+      <div class="card sketch">
+        <h3>📊 System Monitor <span class="tag">LIVE</span></h3>
+
+        <div class="meter">
+          <div class="meter-label"><span>CPU</span><span>42%</span></div>
+          <div class="track"><div class="fill" style="width:42%"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-label"><span>RAM</span><span>11.4 / 32 GB</span></div>
+          <div class="track"><div class="fill" style="width:36%"></div></div>
+        </div>
+        <div class="meter warn">
+          <div class="meter-label"><span>GPU</span><span>78%</span></div>
+          <div class="track"><div class="fill" style="width:78%"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-label"><span>SPEICHER</span><span>4.2 / 512 GB</span></div>
+          <div class="track"><div class="fill" style="width:18%"></div></div>
+        </div>
+        <div class="meter danger">
+          <div class="meter-label"><span>KONTEXT (TokenGuard)</span><span>91%</span></div>
+          <div class="track"><div class="fill" style="width:91%"></div></div>
+        </div>
+
+        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--red);margin-top:6px;">
+          ⚠ TokenGuard bald aktiv · Snapshot wird vorbereitet
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSIONS + APPROVAL -->
+    <div class="grid-2">
+
+      <!-- MISSIONS -->
+      <div class="card sketch">
+        <h3>🎯 Missionen <span class="tag">2 AKTIV</span></h3>
+        <div class="missions">
+          <div class="mission">
+            <div class="title">📥 GitHub Repo analyse – NClaw2</div>
+            <div class="meta">
+              <span>🤖 Scout + Reviewer</span>
+              <span>⏱ 00:12:43</span>
+            </div>
+            <div class="progress"><div class="bar" style="width:64%"></div></div>
+          </div>
+          <div class="mission">
+            <div class="title">📚 PDF Bibliothek indexieren</div>
+            <div class="meta">
+              <span>🤖 Sandmann</span>
+              <span>⏱ 00:04:11</span>
+            </div>
+            <div class="progress"><div class="bar" style="width:31%"></div></div>
+          </div>
+          <div class="mission paused">
+            <div class="title">🧠 Academy – Prompt Wissensupdate</div>
+            <div class="meta">
+              <span>⏸ pausiert</span>
+              <span>wartet auf Freigabe</span>
+            </div>
+            <div class="progress"><div class="bar" style="width:80%; background: repeating-linear-gradient(-45deg, var(--yellow) 0 6px, #e8bb45 6px 12px);"></div></div>
+          </div>
+          <div class="mission done">
+            <div class="title">✅ Skill Factory – PDF Specialist</div>
+            <div class="meta">
+              <span>abgeschlossen</span>
+              <span>vor 2h</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- APPROVAL + NEXUS CHAT -->
+      <div style="display:flex; flex-direction:column; gap:20px;">
+
+        <div class="approval">
+          <div class="msg">
+            <b>Sandmann</b> möchte starten:<br>
+            <b>Repository Import</b> <span style="font-family:'JetBrains Mono';font-size:10px;color:#888;">github.com/openai/whisper</span><br>
+            <span style="font-size:13px;color:#666;">Risiko: <b style="color:var(--green)">Niedrig</b> · Stufe: 🟢 Grün</span>
+          </div>
+          <div class="actions">
+            <button class="btn allow">✅ Erlauben</button>
+            <button class="btn deny">❌ Ablehnen</button>
+            <button class="btn later">⏰ Später</button>
+            <button class="btn">📄 Details</button>
+          </div>
+        </div>
+
+        <div class="card sketch">
+          <h3>💬 Nexus Chat <span class="tag">TELEGRAM</span></h3>
+          <div class="chat">
+            <div class="bubble user">
+              <div class="who">Du · 14:32</div>
+              Analysiere das Repo und erstelle einen Skill.
+            </div>
+            <div class="bubble">
+              <div class="who">Nexus · 14:32</div>
+              Verstanden. Scout übernimmt die Recherche, Reviewer prüft danach. Sandbox-Test läuft in ~4 Min.
+            </div>
+            <div class="bubble user">
+              <div class="who">Du · 14:33</div>
+              👍
+            </div>
+            <div class="bubble">
+              <div class="who">Nexus · 14:33</div>
+              Mission erstellt: <b>#M-2041</b> · Status: läuft
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SKILL TREE + ACADEMY -->
+    <div class="grid-2">
+
+      <div class="card sketch">
+        <h3>🌳 Skill Baum <span class="tag">147 SKILLS</span></h3>
+        <div class="tree">
+          <div class="tree-node"><span class="lvl">5</span> Automation <span class="stars">★★★★★</span></div>
+          <div class="tree-node"><span class="lvl">4</span> PDF Specialist <span class="stars">★★★★☆</span></div>
+          <div class="tree-node"><span class="lvl">4</span> Code Review <span class="stars">★★★★☆</span></div>
+          <div class="tree-node"><span class="lvl">3</span> GitHub Analyse <span class="stars">★★★☆☆</span></div>
+          <div class="tree-node"><span class="lvl">3</span> Prompt Engineering <span class="stars">★★★☆☆</span></div>
+          <div class="tree-node"><span class="lvl">2</span> Bildanalyse <span class="stars">★★☆☆☆</span></div>
+          <div class="tree-node"><span class="lvl">2</span> Web Research <span class="stars">★★☆☆☆</span></div>
+          <div class="tree-node"><span class="lvl">1</span> Video Editing <span class="stars">★☆☆☆☆</span></div>
+        </div>
+      </div>
+
+      <div class="card sketch">
+        <h3>🧠 Academy <span class="tag">68%</span></h3>
+        <div class="meter">
+          <div class="meter-label"><span>Prompt Wissen</span><span>82%</span></div>
+          <div class="track"><div class="fill" style="width:82%"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-label"><span>Sicherheitswissen</span><span>74%</span></div>
+          <div class="track"><div class="fill" style="width:74%"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-label"><span>Coding Wissen</span><span>61%</span></div>
+          <div class="track"><div class="fill" style="width:61%"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-label"><span>Agentenwissen</span><span>55%</span></div>
+          <div class="track"><div class="fill" style="width:55%"></div></div>
+        </div>
+        <div class="meter warn">
+          <div class="meter-label"><span>Forschungswissen</span><span>44%</span></div>
+          <div class="track"><div class="fill" style="width:44%"></div></div>
+        </div>
+
+        <div style="margin-top:10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#777;">
+          📖 Zuletzt gelernt: <b>Anthropic Prompt Library</b> (vor 3h)
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<footer>
+  NClaw v0.9.4 · Local First AI Office Operating System · <b>Draufsicht Kommandozentrale</b>
+</footer>
+
+<script>
+  // Live-Uhr
+  function tick() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toTimeString().slice(0,8);
+  }
+  setInterval(tick, 1000); tick();
+
+  // Menü-Aktivierung
+  document.querySelectorAll('.menu li').forEach(li => {
+    li.addEventListener('click', () => {
+      document.querySelectorAll('.menu li').forEach(x => x.classList.remove('active'));
+      li.classList.add('active');
+    });
+  });
+
+  // Meter random "atmen" lassen (nur Look)
+  setInterval(() => {
+    const cpu = document.querySelectorAll('.meter .fill')[0];
+    if (cpu) {
+      const v = 38 + Math.floor(Math.random() * 20);
+      cpu.style.width = v + '%';
+      cpu.closest('.meter').querySelector('.meter-label span:last-child').textContent = v + '%';
+    }
+  }, 2200);
+</script>
+
+</body>
+</html>
