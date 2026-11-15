@@ -528,6 +528,12 @@
 
   <!-- ========= MAIN ========= -->
   <main class="main">
+    <section class="card sketch" id="nclaw-live-panel" aria-live="polite">
+      <h3>Backend-Verbindung <span class="tag" id="api-state">PRÜFE …</span></h3>
+      <p id="api-message">Verbinde mit der lokalen NClaw API unter http://127.0.0.1:8000 …</p>
+      <div id="api-missions" class="missions" style="margin-top:12px;"></div>
+      <small style="display:block;margin-top:10px;color:#777;font-family:'JetBrains Mono',monospace;">Echte Backend-Daten · Aktualisierung alle 15 Sekunden</small>
+    </section>
 
     <!-- STAT STRIP -->
     <div class="stats">
@@ -748,6 +754,51 @@
       now.toTimeString().slice(0,8);
   }
   setInterval(tick, 1000); tick();
+
+  // NClaw V1: echte Daten aus der lokalen API laden.
+  const NCLAW_API = 'http://127.0.0.1:8000';
+  const apiState = document.getElementById('api-state');
+  const apiMessage = document.getElementById('api-message');
+  const apiMissions = document.getElementById('api-missions');
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[ch]);
+  }
+
+  async function refreshNclaw() {
+    try {
+      const [healthResponse, agentsResponse, missionsResponse] = await Promise.all([
+        fetch(NCLAW_API + '/api/health'),
+        fetch(NCLAW_API + '/api/agents'),
+        fetch(NCLAW_API + '/api/missions')
+      ]);
+      if (!healthResponse.ok || !agentsResponse.ok || !missionsResponse.ok) {
+        throw new Error('API antwortet mit einem Fehlerstatus');
+      }
+      const health = await healthResponse.json();
+      const agents = await agentsResponse.json();
+      const missions = await missionsResponse.json();
+      apiState.textContent = 'VERBUNDEN';
+      apiState.style.background = '#e8f5e9';
+      apiMessage.textContent = health.service + ' · Datenbank: ' + health.database +
+        ' · Agenten registriert: ' + agents.length;
+      apiMissions.innerHTML = missions.length
+        ? missions.map(m => '<div class="mission"><div class="title">' +
+            escapeHtml(m.title) + '</div><div class="meta"><span>' +
+            escapeHtml(m.status) + '</span><span>Priorität: ' +
+            escapeHtml(m.priority) + '</span></div></div>').join('')
+        : '<p>Noch keine Missionen in der lokalen Datenbank.</p>';
+    } catch (error) {
+      apiState.textContent = 'OFFLINE';
+      apiState.style.background = '#fde8e8';
+      apiMessage.textContent = 'Keine Verbindung. Starte zuerst den Backend-Server (siehe docs/V1-QUICKSTART.md).';
+      apiMissions.innerHTML = '';
+    }
+  }
+  refreshNclaw();
+  setInterval(refreshNclaw, 15000);
 
   // Menü-Aktivierung
   document.querySelectorAll('.menu li').forEach(li => {
