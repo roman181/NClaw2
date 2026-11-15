@@ -23,6 +23,10 @@ class MissionCreate(BaseModel):
     priority: str = Field(default="normal", pattern="^(low|normal|high|urgent)$")
 
 
+class MissionStatusUpdate(BaseModel):
+    status: MissionStatus
+
+
 class Mission(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: str
