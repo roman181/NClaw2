@@ -31,3 +31,17 @@ def get_mission(mission_id: str) -> Mission | None:
     with get_connection() as connection:
         row = connection.execute("SELECT * FROM missions WHERE id = ?", (mission_id,)).fetchone()
     return Mission(**dict(row)) if row else None
+
+
+
+def update_mission_status(mission_id: str, status: MissionStatus) -> Mission | None:
+    now = utc_now()
+    with get_connection() as connection:
+        cursor = connection.execute(
+            "UPDATE missions SET status = ?, updated_at = ? WHERE id = ?",
+            (status.value, now.isoformat(), mission_id),
+        )
+        if cursor.rowcount == 0:
+            return None
+        row = connection.execute("SELECT * FROM missions WHERE id = ?", (mission_id,)).fetchone()
+    return Mission(**dict(row)) if row else None
